@@ -114,7 +114,7 @@ class S7Clocking(Module, AutoCSR):
         ]
 
         mmcm_fb = Signal()
-        mmcm_locked = Signal()
+        self.mmcm_locked = Signal()
         mmcm_clk0 = Signal()
         mmcm_clk1 = Signal()
         mmcm_clk2 = Signal()
@@ -122,7 +122,7 @@ class S7Clocking(Module, AutoCSR):
 
         self.specials += [
             Instance("MMCME2_ADV",
-                p_BANDWIDTH="OPTIMIZED", i_RST=self._mmcm_reset.storage, o_LOCKED=mmcm_locked,
+                p_BANDWIDTH="OPTIMIZED", i_RST=self._mmcm_reset.storage, o_LOCKED=self.mmcm_locked,
 
                 # VCO
                 p_REF_JITTER1=0.01, p_CLKIN1_PERIOD=1e9/clkin_freq,
@@ -156,10 +156,10 @@ class S7Clocking(Module, AutoCSR):
                 self._mmcm_drdy.status.eq(1)
             )
         ]
-        self.specials += MultiReg(mmcm_locked, self.locked, "sys")
+        self.specials += MultiReg(self.mmcm_locked, self.locked, "sys")
         self.comb += self._locked.status.eq(self.locked)
 
         self.specials += [
-            AsyncResetSynchronizer(self.cd_pix, ~mmcm_locked),
-            AsyncResetSynchronizer(self.cd_pix1p25x, ~mmcm_locked),
+            AsyncResetSynchronizer(self.cd_pix, ~self.mmcm_locked),
+            AsyncResetSynchronizer(self.cd_pix1p25x, ~self.mmcm_locked),
         ]

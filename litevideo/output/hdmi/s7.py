@@ -90,7 +90,7 @@ class S7HDMIOutClocking(Module, AutoCSR):
 
         # # #
 
-        mmcm_locked = Signal()
+        self.mmcm_locked = Signal()
         mmcm_fb = Signal()
         mmcm_clk0 = Signal()
         mmcm_clk1 = Signal()
@@ -99,7 +99,7 @@ class S7HDMIOutClocking(Module, AutoCSR):
         self.specials += [
             Instance("MMCME2_ADV",
                 p_BANDWIDTH="OPTIMIZED",
-                i_RST=self._mmcm_reset.storage, o_LOCKED=mmcm_locked,
+                i_RST=self._mmcm_reset.storage, o_LOCKED=self.mmcm_locked,
 
                 # VCO
                 p_REF_JITTER1=0.01, p_CLKIN1_PERIOD=10.0,
@@ -130,7 +130,7 @@ class S7HDMIOutClocking(Module, AutoCSR):
                 self._mmcm_drdy.status.eq(1)
             )
         ]
-        self.comb += self.cd_pix.rst.eq(~mmcm_locked)
+        self.comb += self.cd_pix.rst.eq(~self.mmcm_locked)
         self.submodules.clk_gen = S7HDMIOutEncoderSerializer(pads.clk_p, pads.clk_n, bypass_encoder=True)
         self.comb += self.clk_gen.data.eq(Signal(10, reset=0b0000011111))
 

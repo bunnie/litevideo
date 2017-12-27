@@ -40,7 +40,7 @@ class EDID(Module, AutoCSR):
         if hasattr(pads, "hpd_notif"):
             self.specials += MultiReg(pads.hpd_notif, self._hpd_notif.status)
         else:
-            self.comb += self._hpd_notif.status.eq(1)
+            self.comb += self._hpd_notif.status.eq(0)  # changed to 0 by bunnie, HPD is inverted on Netv2
         if hasattr(pads, "hpd_en"):
             self.comb += pads.hpd_en.eq(self._hpd_en.storage)
 
