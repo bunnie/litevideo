@@ -43,7 +43,7 @@ class HDMIIn(Module, AutoCSR):
 
             charsync = CharSync()
             setattr(self.submodules, name + "_charsync", charsync)
-            self.comb += charsync.raw_data.eq(cap.d)
+            self.comb += charsync.raw_data.eq(~cap.d)
 
             wer = WER()
             setattr(self.submodules, name + "_wer", wer)
