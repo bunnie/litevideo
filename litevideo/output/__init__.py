@@ -35,57 +35,67 @@ class VideoOut(Module, AutoCSR):
     def __init__(self, device, pads, dram_port,
         mode="rgb",
         fifo_depth=512,
-        external_clocking=None):
-        cd = dram_port.cd
+        external_clocking=None,
+                 bypass=False,
+                 bypass_sdout=None):
+        self.submodules.driver = driver = Driver(device, pads, external_clocking, bypass=bypass)
 
-        self.submodules.core = core = VideoOutCore(dram_port, mode, fifo_depth)
-        self.submodules.driver = driver = Driver(device, pads, external_clocking)
-
-        if mode == "rgb":
+        if bypass:
             self.comb += [
-                core.source.connect(driver.sink, omit=["data"]),
-                driver.sink.r.eq(core.source.data[:8]),
-                driver.sink.g.eq(core.source.data[8:16]),
-                driver.sink.b.eq(core.source.data[16:])
-            ]
-        elif mode == "ycbcr422":
-            ycbcr422to444 = ClockDomainsRenamer(cd)(YCbCr422to444())
-            ycbcr2rgb = ClockDomainsRenamer(cd)(YCbCr2RGB())
-            timing_delay = TimingDelay(ycbcr422to444.latency + ycbcr2rgb.latency)
-            timing_delay = ClockDomainsRenamer(cd)(timing_delay)
-            self.submodules += ycbcr422to444, ycbcr2rgb, timing_delay
-
-            # data / control
-            de_r = Signal()
-            core_source_valid_d = Signal()
-            core_source_data_d = Signal(16)
-            sync_cd = getattr(self.sync, cd)
-            sync_cd += [
-                de_r.eq(core.source.de),
-                core_source_valid_d.eq(core.source.valid),
-                core_source_data_d.eq(core.source.data),
-            ]
-
-            self.comb += [
-                core.source.ready.eq(1), # always ready, no flow control
-                ycbcr422to444.reset.eq(core.source.de & ~de_r),
-                ycbcr422to444.sink.valid.eq(core_source_valid_d),
-                ycbcr422to444.sink.y.eq(core_source_data_d[:8]),
-                ycbcr422to444.sink.cb_cr.eq(core_source_data_d[8:]),
-
-                ycbcr422to444.source.connect(ycbcr2rgb.sink),
-
-                ycbcr2rgb.source.connect(driver.sink)
-            ]
-            # timing
-            self.comb += [
-                timing_delay.sink.de.eq(core.source.de),
-                timing_delay.sink.vsync.eq(core.source.vsync),
-                timing_delay.sink.hsync.eq(core.source.hsync),
-
-                driver.sink.de.eq(timing_delay.source.de),
-                driver.sink.vsync.eq(timing_delay.source.vsync),
-                driver.sink.hsync.eq(timing_delay.source.hsync)
+                driver.hdmi_phy.es0.data_in.eq(bypass_sdout[:10]),
+                driver.hdmi_phy.es1.data_in.eq(bypass_sdout[10:20]),
+                driver.hdmi_phy.es2.data_in.eq(bypass_sdout[20:])
             ]
         else:
-            raise ValueError("Video mode {} not supported".format(mode))
+            cd = dram_port.cd
+            
+            self.submodules.core = core = VideoOutCore(dram_port, mode, fifo_depth)
+            
+            if mode == "rgb":
+                self.comb += [
+                    core.source.connect(driver.sink, omit=["data"]),
+                    driver.sink.r.eq(core.source.data[:8]),
+                    driver.sink.g.eq(core.source.data[8:16]),
+                    driver.sink.b.eq(core.source.data[16:])
+                ]
+            elif mode == "ycbcr422":
+                ycbcr422to444 = ClockDomainsRenamer(cd)(YCbCr422to444())
+                ycbcr2rgb = ClockDomainsRenamer(cd)(YCbCr2RGB())
+                timing_delay = TinmingDelay(ycbcr422to444.latency + ycbcr2rgb.latency)
+                timing_delay = ClockDomainsRenamer(cd)(timing_delay)
+                self.submodules += ycbcr422to444, ycbcr2rgb, timing_delay
+
+                # data / control
+                de_r = Signal()
+                core_source_valid_d = Signal()
+                core_source_data_d = Signal(16)
+                sync_cd = getattr(self.sync, cd)
+                sync_cd += [
+                    de_r.eq(core.source.de),
+                    core_source_valid_d.eq(core.source.valid),
+                    core_source_data_d.eq(core.source.data),
+                ]
+
+                self.comb += [
+                    core.source.ready.eq(1), # always ready, no flow control
+                    ycbcr422to444.reset.eq(core.source.de & ~de_r),
+                    ycbcr422to444.sink.valid.eq(core_source_valid_d),
+                    ycbcr422to444.sink.y.eq(core_source_data_d[:8]),
+                    ycbcr422to444.sink.cb_cr.eq(core_source_data_d[8:]),
+
+                    ycbcr422to444.source.connect(ycbcr2rgb.sink),
+
+                    ycbcr2rgb.source.connect(driver.sink)
+                ]
+                # timing
+                self.comb += [
+                    timing_delay.sink.de.eq(core.source.de),
+                    timing_delay.sink.vsync.eq(core.source.vsync),
+                    timing_delay.sink.hsync.eq(core.source.hsync),
+                    
+                    driver.sink.de.eq(timing_delay.source.de),
+                    driver.sink.vsync.eq(timing_delay.source.vsync),
+                    driver.sink.hsync.eq(timing_delay.source.hsync)
+                ]
+            else:
+                raise ValueError("Video mode {} not supported".format(mode))

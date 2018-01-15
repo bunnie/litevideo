@@ -17,6 +17,15 @@ class S7HDMIOutEncoderSerializer(Module):
             self.data = self.encoder.out
         else:
             self.data = Signal(10)
+            ## synchronize incoming data to local pixclock domain
+            self.data_in = Signal(10)
+            self.data_pipe = Signal(10)
+            self.data_rename = Signal(10)
+            self.sync.pix += [
+                self.data_pipe.eq(self.data_in),
+                self.data_rename.eq(self.data_pipe)
+            ]
+            self.comb += self.data.eq(self.data_rename)
 
         # # #
 
@@ -132,27 +141,28 @@ class S7HDMIOutClocking(Module, AutoCSR):
         ]
         self.comb += self.cd_pix.rst.eq(~mmcm_locked)
         self.submodules.clk_gen = S7HDMIOutEncoderSerializer(pads.clk_p, pads.clk_n, bypass_encoder=True)
-        self.comb += self.clk_gen.data.eq(Signal(10, reset=0b0000011111))
+        self.comb += self.clk_gen.data_in.eq(Signal(10, reset=0b0000011111))
 
 
 class S7HDMIOutPHY(Module):
-    def __init__(self, pads):
-        self.sink = sink = stream.Endpoint(phy_layout())
+    def __init__(self, pads, bypass=False):
 
         # # #
 
-        self.submodules.es0 = S7HDMIOutEncoderSerializer(pads.data0_p, pads.data0_n)
-        self.submodules.es1 = S7HDMIOutEncoderSerializer(pads.data1_p, pads.data1_n)
-        self.submodules.es2 = S7HDMIOutEncoderSerializer(pads.data2_p, pads.data2_n)
-        self.comb += [
-            sink.ready.eq(1),
-            self.es0.d.eq(sink.b),
-            self.es1.d.eq(sink.g),
-            self.es2.d.eq(sink.r),
-            self.es0.c.eq(Cat(sink.hsync, sink.vsync)),
-            self.es1.c.eq(0),
-            self.es2.c.eq(0),
-            self.es0.de.eq(sink.de),
-            self.es1.de.eq(sink.de),
-            self.es2.de.eq(sink.de)
-        ]
+        self.submodules.es0 = S7HDMIOutEncoderSerializer(pads.data0_p, pads.data0_n, bypass_encoder=bypass)
+        self.submodules.es1 = S7HDMIOutEncoderSerializer(pads.data1_p, pads.data1_n, bypass_encoder=bypass)
+        self.submodules.es2 = S7HDMIOutEncoderSerializer(pads.data2_p, pads.data2_n, bypass_encoder=bypass)
+        if not bypass:
+            self.sink = sink = stream.Endpoint(phy_layout())
+            self.comb += [
+                sink.ready.eq(1),
+                self.es0.d.eq(sink.b),
+                self.es1.d.eq(sink.g),
+                self.es2.d.eq(sink.r),
+                self.es0.c.eq(Cat(sink.hsync, sink.vsync)),
+                self.es1.c.eq(0),
+                self.es2.c.eq(0),
+                self.es0.de.eq(sink.de),
+                self.es1.de.eq(sink.de),
+                self.es2.de.eq(sink.de)
+            ]
