@@ -164,36 +164,8 @@ class HDMIIn(Module, AutoCSR):
             self.busy = Signal()
             
             # start of frame detection
-            vsync_r = Signal()
-            new_frame = Signal()
-            self.comb += new_frame.eq(self.hi0_vsync & ~vsync_r)
-            self.sync.pix += vsync_r.eq(self.hi0_vsync)
+            self.vsync_r = Signal()
+            self.new_frame = Signal()
+            self.comb += self.new_frame.eq(self.hi0_vsync & ~self.vsync_r)
+            self.sync.pix += self.vsync_r.eq(self.hi0_vsync)
             
-            # FIFO
-            dummy = Signal(2)
-            self.comb += dummy.eq(0)
-            
-            fifo = stream.AsyncFIFO(word_layout, fifo_depth)
-            fifo = ClockDomainsRenamer({"write": "pix", "read": "sys"})(fifo)
-            self.submodules += fifo
-            self.comb += [
-                fifo.sink.pixels.eq(Cat(self.sdout,dummy)),  # puts dummy on the MSBs
-                fifo.sink.valid.eq(self.hi0_valid)
-            ]
-            self.sync.pix += \
-                             If(new_frame,
-                                fifo.sink.sof.eq(1)
-                             ).Elif(self.hi0_valid,
-                                    fifo.sink.sof.eq(0)
-                             )
-
-            self.comb += [
-                fifo.source.connect(self.frame),
-                self.busy.eq(0)
-            ]
-
-            self.submodules.dma = DMA(dram_port, n_dma_slots)
-            self.comb += self.frame.connect(self.dma.frame)
-            self.ev = self.dma.ev
-
-    autocsr_exclude = {"ev"}

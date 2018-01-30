@@ -36,25 +36,19 @@ class VideoOut(Module, AutoCSR):
         mode="rgb",
         fifo_depth=512,
         external_clocking=None,
-                 bypass=False):
-        self.submodules.driver = driver = Driver(device, pads, external_clocking, bypass=bypass)
+                 sdata=None):
 
-        if bypass:
-            cd = dram_port.cd
-            
-            self.submodules.core = core = VideoOutCore(dram_port, mode, fifo_depth)
-            
+        if mode == "bypass":
+            self.submodules.driver = driver = Driver(device, pads, external_clocking, bypass=True)
+
             self.comb += [
-#                core.source.connect(driver.sink, omit=["data"]),
-                core.source.ready.eq(1),
-                core.source.valid.eq(1),
-                core.source.de.eq(1),
-                
-                driver.hdmi_phy.es0.data_in.eq(core.source.data[:10]),
-                driver.hdmi_phy.es1.data_in.eq(core.source.data[10:20]),
-                driver.hdmi_phy.es2.data_in.eq(core.source.data[20:29])
+                driver.hdmi_phy.es0.data_in.eq(sdata[:10]),
+                driver.hdmi_phy.es1.data_in.eq(sdata[10:20]),
+                driver.hdmi_phy.es2.data_in.eq(sdata[20:30])
             ]
         else:
+            self.submodules.driver = driver = Driver(device, pads, external_clocking, bypass=False)
+
             cd = dram_port.cd
             
             self.submodules.core = core = VideoOutCore(dram_port, mode, fifo_depth)

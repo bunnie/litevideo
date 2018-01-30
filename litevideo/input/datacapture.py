@@ -267,14 +267,25 @@ class S7DataCapture(Module, AutoCSR):
         # use 2 serdes for phase detection: master & slave
         serdes_m_i_nodelay = Signal()
         serdes_s_i_nodelay = Signal()
-        self.specials += [
-            Instance("IBUFDS_DIFF_OUT",
-                i_I=pad_p,
-                i_IB=pad_n,
-                o_O=serdes_m_i_nodelay,
-                o_OB=serdes_s_i_nodelay,
-            )
-        ]
+
+        if hasattr(pad_p, "inverted"):
+            self.specials += [
+                Instance("IBUFDS_DIFF_OUT",
+                         i_I=pad_p,
+                         i_IB=pad_n,
+                         o_O=serdes_s_i_nodelay,
+                         o_OB=serdes_m_i_nodelay,
+                         )
+            ]
+        else:
+            self.specials += [
+                Instance("IBUFDS_DIFF_OUT",
+                     i_I=pad_p,
+                     i_IB=pad_n,
+                     o_O=serdes_m_i_nodelay,
+                     o_OB=serdes_s_i_nodelay,
+                )
+            ]
 
         delay_rst = Signal()
         delay_master_inc = Signal()
@@ -356,17 +367,10 @@ class S7DataCapture(Module, AutoCSR):
             ),
         ]
 
-        # polarity
-        if hasattr(pad_p, "inverted"):
-            self.comb += [
-                serdes_m_d.eq(~serdes_m_q),
-                serdes_s_d.eq(serdes_s_q)
-            ]
-        else:
-            self.comb += [
-                serdes_m_d.eq(serdes_m_q),
-                serdes_s_d.eq(~serdes_s_q)
-            ]
+        self.comb += [
+            serdes_m_d.eq(serdes_m_q),
+            serdes_s_d.eq(~serdes_s_q)
+        ]
 
         # datapath
         self.submodules.gearbox = Gearbox(8, "pix1p25x", 10, "pix")
