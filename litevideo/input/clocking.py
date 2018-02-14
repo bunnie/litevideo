@@ -107,6 +107,7 @@ class S7Clocking(Module, AutoCSR):
             self._mmcm_dat_o_r = CSRStatus(16)
             self._mmcm_drdy_o = CSRStatus()
             self.clock_domains.cd_pix_o = ClockDomain()
+            self.clock_domains.cd_pix_o_fm = ClockDomain()
             self.clock_domains.cd_pix5x_o = ClockDomain(reset_less=True)
 
         # # #
@@ -173,6 +174,7 @@ class S7Clocking(Module, AutoCSR):
         if split_mmcm:
             mmcm_fb2_o = Signal()
             mmcm_clk0_o = Signal()
+            mmcm_clk1_o = Signal()
             self.specials += [
                 Instance("PLLE2_ADV",
                     p_BANDWIDTH="LOW", i_RST=self._mmcm_reset.storage, o_LOCKED=mmcm_locked_o,
@@ -185,6 +187,7 @@ class S7Clocking(Module, AutoCSR):
 
                     # pix clk
                     p_CLKOUT0_DIVIDE=5, p_CLKOUT0_PHASE=0.000, o_CLKOUT0=mmcm_clk0_o,
+                    p_CLKOUT1_DIVIDE=5, p_CLKOUT1_PHASE=0.000, o_CLKOUT1=mmcm_clk1_o,
                     p_CLKOUT2_DIVIDE=1, p_CLKOUT2_PHASE=0.000, o_CLKOUT2=mmcm_clk2_o,
 
                          # DRP
@@ -197,6 +200,7 @@ class S7Clocking(Module, AutoCSR):
                     o_DO=self._mmcm_dat_o_r.status
                          ),
                 Instance("BUFG", i_I=mmcm_clk0_o, o_O=self.cd_pix_o.clk),
+                Instance("BUFG", i_I=mmcm_clk1_o, o_O=self.cd_pix_o_fm.clk), # dedicated for frequency msmnt to prevent constraint renaming
                 Instance("BUFG", i_I=mmcm_clk2_o, o_O=self.cd_pix5x_o.clk), # was BUFIO...
             ]
 
