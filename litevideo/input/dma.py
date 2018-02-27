@@ -143,7 +143,15 @@ class DMA(Module):
         fsm.act("EOF",
             If(~dram_port.wdata.valid,
                 self._slot_array.address_done.eq(1),
-                NextState("WAIT_SOF")
+               reset_words.eq(1),  # added
+               NextState("RESET_XFER")
+            )
+        )
+        fsm.act("RESET_XFER",
+            reset_words.eq(1),
+            self.frame.ready.eq(~self.frame.sof),
+            If(self.frame.sof & self.frame.valid,
+               NextState("TRANSFER_PIXELS")
             )
         )
 
