@@ -16,7 +16,7 @@ class Initiator(Module, AutoCSR):
 
     Generates the H/V and DMA parameters of a frame.
     """
-    def __init__(self, cd):
+    def __init__(self, cd, genlock=False, genlock_signal=None):
         self.source = stream.Endpoint(frame_parameter_layout +
                                       frame_dma_layout)
 
@@ -31,7 +31,10 @@ class Initiator(Module, AutoCSR):
         for name, width in frame_parameter_layout + frame_dma_layout:
             setattr(self, name, CSRStorage(width, name=name, atomic_write=True))
             self.comb += getattr(cdc.sink, name).eq(getattr(self, name).storage)
-        self.comb += cdc.sink.valid.eq(self.enable.storage)
+        if genlock == False:
+            self.comb += cdc.sink.valid.eq(self.enable.storage)
+        else:
+            self.comb += cdc.sink.valid.eq(~genlock_signal) # genlock pulses high at SOF, so we invert to clear/reload registers
         self.comb += cdc.source.connect(self.source)
 
 
@@ -99,6 +102,8 @@ class TimingGenerator(Module):
 
         hcounter = Signal(hbits)
         vcounter = Signal(vbits)
+        self.hcounter = hcounter
+        self.vcounter = vcounter
 
         self.comb += [
             If(sink.valid,
@@ -154,7 +159,7 @@ class VideoOutCore(Module, AutoCSR):
 
     Generates a video stream from memory.
     """
-    def __init__(self, dram_port, mode="rgb", fifo_depth=512):
+    def __init__(self, dram_port, mode="rgb", fifo_depth=512, genlock=False, genlock_signal=None):
         try:
             dw = modes_dw[mode]
         except:
@@ -171,7 +176,7 @@ class VideoOutCore(Module, AutoCSR):
 
         cd = dram_port.cd
 
-        self.submodules.initiator = initiator = Initiator(cd)
+        self.submodules.initiator = initiator = Initiator(cd, genlock, genlock_signal)
         self.submodules.timing = timing = ClockDomainsRenamer(cd)(TimingGenerator())
         self.submodules.dma = dma = ClockDomainsRenamer(cd)(DMAReader(dram_port, fifo_depth))
 
