@@ -34,7 +34,7 @@ class Initiator(Module, AutoCSR):
         if genlock == False:
             self.comb += cdc.sink.valid.eq(self.enable.storage)
         else:
-            self.comb += cdc.sink.valid.eq(~genlock_signal) # genlock pulses high at SOF, so we invert to clear/reload registers
+            self.comb += cdc.sink.valid.eq(~genlock_signal & self.enable.storage) # genlock pulses high at SOF, so we invert to clear/reload registers
         self.comb += cdc.source.connect(self.source)
 
 
