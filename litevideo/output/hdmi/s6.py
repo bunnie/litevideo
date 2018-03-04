@@ -1,5 +1,5 @@
-from litex.gen import *
-from litex.gen.genlib.cdc import MultiReg
+from migen import *
+from migen.genlib.cdc import MultiReg
 
 from litex.soc.interconnect import stream
 from litex.soc.interconnect.csr import *
@@ -179,8 +179,11 @@ class S6HDMIOutClocking(Module, AutoCSR):
                                   i_D0=not hasattr(pads.clk_p, "inverted"),
                                   i_D1=hasattr(pads.clk_p, "inverted"),
                                   i_R=0, i_S=0)
-        self.specials += Instance("OBUFDS", i_I=hdmi_clk_se,
-                                  o_O=pads.clk_p, o_OB=pads.clk_n)
+        if hasattr(pads, "clk_p"):
+            self.specials += Instance("OBUFDS", i_I=hdmi_clk_se,
+                                      o_O=pads.clk_p, o_OB=pads.clk_n)
+        else:
+            self.comb += pads.clk.eq(hdmi_clk_se)
 
 
 class _S6HDMIOutEncoderSerializer(Module):

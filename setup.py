@@ -5,19 +5,20 @@ from setuptools import setup
 from setuptools import find_packages
 
 
-if sys.version_info[:3] < (3, 3):
-    raise SystemExit("You need Python 3.3+")
+if sys.version_info[:3] < (3, 5):
+    raise SystemExit("You need Python 3.5+")
 
 
 setup(
     name="litevideo",
-    version="0.1",
+    version="0.2.dev",
     description="Small footprint and configurable video cores",
     long_description=open("README").read(),
     author="Florent Kermarrec",
     author_email="florent@enjoy-digital.fr",
     url="http://enjoy-digital.fr",
     download_url="https://github.com/enjoy-digital/litevideo",
+    test_suite="test",
     license="BSD",
     platforms=["Any"],
     keywords="HDL ASIC FPGA hardware design",

@@ -1,8 +1,8 @@
-from litex.gen import *
-from litex.gen.fhdl.specials import Tristate
-from litex.gen.genlib.cdc import MultiReg
-from litex.gen.genlib.fsm import FSM, NextState
-from litex.gen.genlib.misc import chooser
+from migen import *
+from migen.fhdl.specials import Tristate
+from migen.genlib.cdc import MultiReg
+from migen.genlib.fsm import FSM, NextState
+from migen.genlib.misc import chooser
 
 from litex.soc.interconnect.csr import CSRStorage, CSRStatus, AutoCSR
 
@@ -55,9 +55,9 @@ class EDID(Module, AutoCSR):
 
         pad_scl = getattr(pads, "scl")
         if hasattr(pad_scl, "inverted"):
-            self.specials += MultiReg(pads.scl, scl_raw)
-        else:
             self.specials += MultiReg(~pads.scl, scl_raw)
+        else:
+            self.specials += MultiReg(pads.scl, scl_raw)
         self.specials += [
             Tristate(pads.sda, 0, _sda_drv_reg, _sda_i_async),
             MultiReg(_sda_i_async, sda_raw)
