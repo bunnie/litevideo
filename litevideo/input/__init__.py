@@ -12,6 +12,7 @@ from litevideo.input.chansync import ChanSync
 from litevideo.input.analysis import SyncPolarity, ResolutionDetection
 from litevideo.input.analysis import FrameExtraction
 from litevideo.input.dma import DMA
+from litevideo.input.dma import DMA_poll
 
 from litex.soc.interconnect import stream
 from litevideo.input.common import channel_layout
@@ -149,8 +150,8 @@ class HDMIIn(Module, AutoCSR):
             ]
 
 
-            self.submodules.dma = DMA(dram_port, n_dma_slots)
+            self.submodules.dma = self.dma = DMA_poll(dram_port, n_dma_slots)
             self.comb += self.frame.frame.connect(self.dma.frame)
-            self.ev = self.dma.ev
+#            self.ev = self.dma.ev
 
-    autocsr_exclude = {"ev"}
+#    autocsr_exclude = {"ev"}
